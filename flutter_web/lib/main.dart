@@ -3,14 +3,13 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:popover/popover.dart'; // popoverをインポート
 import 'package:shared_preferences/shared_preferences.dart';
-
-
 
 // トップレベルで定義
 const String portfolioKey = 'portfolio_items';
+const String updateIntervalKey = 'update_interval'; // キーをここに移動
 late List<PortfolioItem> initialPortfolioItems;
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,14 +68,12 @@ class PortfolioItem {
     required this.acquisitionPrice,
   });
 
-  // PortfolioItemをJSONに変換
   Map<String, dynamic> toJson() => {
         'code': code,
         'quantity': quantity,
         'acquisitionPrice': acquisitionPrice,
       };
 
-  // JSONからPortfolioItemを生成
   factory PortfolioItem.fromJson(Map<String, dynamic> json) {
     return PortfolioItem(
       code: json['code'] as String,
@@ -86,7 +83,6 @@ class PortfolioItem {
   }
 }
 
-// 表示用の結合データモデル
 class PortfolioDisplayData {
   final FinancialData financialData;
   final PortfolioItem portfolioItem;
@@ -131,10 +127,9 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final List<String> _defaultCodes = const ['^DJI', '998407.O', 'USDJPY=X'];
-  List<PortfolioItem> _portfolioItems = []; // 型をPortfolioItemに変更
-
+  List<PortfolioItem> _portfolioItems = [];
   List<FinancialData> _defaultFinancialData = [];
-  List<PortfolioDisplayData> _portfolioDisplayData = []; // 型をPortfolioDisplayDataに変更
+  List<PortfolioDisplayData> _portfolioDisplayData = [];
   String _statusMessage = '';
   String _rawResponse = '';
   Timer? _timer;
@@ -142,9 +137,9 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    _portfolioItems = List.from(initialPortfolioItems); // 初期データをコピー
+    _portfolioItems = List.from(initialPortfolioItems);
     _callWorker();
-    _timer = Timer.periodic(const Duration(seconds: 60), (Timer t) => _callWorker());
+    _setupTimer();
   }
 
   @override
@@ -152,8 +147,15 @@ class _MyHomePageState extends State<MyHomePage> {
     _timer?.cancel();
     super.dispose();
   }
-  Future<void> _loadPortfolio() async {
-    // この関数はmain()で呼び出されるため、ここでは不要
+
+  // --- Timer Setup ---
+  Future<void> _setupTimer() async {
+    _timer?.cancel();
+    final prefs = await SharedPreferences.getInstance();
+    final updateInterval = prefs.getInt(updateIntervalKey) ?? 60;
+    if (updateInterval > 0) {
+      _timer = Timer.periodic(Duration(seconds: updateInterval), (Timer t) => _callWorker());
+    }
   }
 
   Future<void> _savePortfolio() async {
@@ -175,7 +177,22 @@ class _MyHomePageState extends State<MyHomePage> {
         ));
       });
       await _savePortfolio();
-      // 保存が確実に完了するのを待つためのわずかな遅延
+      await Future.delayed(const Duration(milliseconds: 100));
+      await _callWorker();
+    }
+  }
+
+  Future<void> _editStock(int index, int newQuantity, double newAcquisitionPrice) async {
+    if (newQuantity > 0 && newAcquisitionPrice >= 0) {
+      setState(() {
+        final originalItem = _portfolioItems[index];
+        _portfolioItems[index] = PortfolioItem(
+          code: originalItem.code,
+          quantity: newQuantity,
+          acquisitionPrice: newAcquisitionPrice,
+        );
+      });
+      await _savePortfolio();
       await Future.delayed(const Duration(milliseconds: 100));
       await _callWorker();
     }
@@ -186,9 +203,8 @@ class _MyHomePageState extends State<MyHomePage> {
       _portfolioItems.removeAt(index);
     });
     await _savePortfolio();
-    // 保存が確実に完了するのを待つためのわずかな遅延
     await Future.delayed(const Duration(milliseconds: 100));
-    await _callWorker(); // ポートフォリオの表示を更新するために再呼び出し
+    await _callWorker();
   }
 
   // --- API Call ---
@@ -273,6 +289,23 @@ class _MyHomePageState extends State<MyHomePage> {
             onPressed: _callWorker,
             tooltip: 'Refresh Data',
           ),
+          Builder( // Builderを追加してPopoverのcontextを正しく取得
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.timer_outlined),
+              onPressed: () {
+                showPopover(
+                  context: context,
+                  bodyBuilder: (context) => const UpdateIntervalPicker(),
+                  onPop: () => _setupTimer(), // Popoverが閉じたらタイマーを再設定
+                  direction: PopoverDirection.bottom,
+                  width: 250,
+                  arrowHeight: 15,
+                  arrowWidth: 30,
+                );
+              },
+              tooltip: 'Set Update Interval',
+            ),
+          ),
         ],
       ),
       body: ListView(
@@ -286,17 +319,14 @@ class _MyHomePageState extends State<MyHomePage> {
                 textAlign: TextAlign.center,
               ),
             ),
-          // Default Market Data Section
           if (_defaultFinancialData.isNotEmpty)
             _buildSectionHeader(context, 'Default Market Data'),
           if (_defaultFinancialData.isNotEmpty)
             _buildGridView(_defaultFinancialData, false, true),
 
-          // Total P/L Section
           if (_portfolioDisplayData.isNotEmpty)
             _buildTotalProfitLoss(),
 
-          // My Portfolio Section
           _buildSectionHeader(context, 'My Portfolio'),
           if (_portfolioDisplayData.isNotEmpty)
             _buildPortfolioGridView(_portfolioDisplayData, true, false)
@@ -306,7 +336,6 @@ class _MyHomePageState extends State<MyHomePage> {
               child: Center(child: Text('Your portfolio is empty. Add stocks using the ' + ' button.')),
             ),
 
-          // Raw Response Section
           if (_rawResponse.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(8.0, 16.0, 8.0, 8.0),
@@ -337,7 +366,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  // --- Total P/L Calculation and Widget ---
   Map<String, double> _calculateTotalPortfolioMetrics() {
     double totalAcquisitionCost = 0;
     double totalEstimatedValue = 0;
@@ -401,20 +429,20 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget _buildGridView(List<FinancialData> data, bool showRemoveButton, bool isDefaultSection) {
     return GridView.builder(
       padding: const EdgeInsets.all(16.0),
-      shrinkWrap: true, // Important for ListView
-      physics: const NeverScrollableScrollPhysics(), // Important for ListView
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       gridDelegate: isDefaultSection
           ? const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3, // デフォルト銘柄は常に3列
-              childAspectRatio: 1.0 / 0.5, // アイテムの幅と高さの比率
-              crossAxisSpacing: 16, // 水平方向のスペース
-              mainAxisSpacing: 16, // 垂直方向のスペース
+              crossAxisCount: 3,
+              childAspectRatio: 1.0 / 0.5,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
             )
           : const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 420, // ポートフォリオは最大5個表示されるように調整
-              childAspectRatio: 4 / 3, // アイテムの幅と高さの比率
-              crossAxisSpacing: 16, // 水平方向のスペース
-              mainAxisSpacing: 16, // 垂直方向のスペース
+              maxCrossAxisExtent: 420,
+              childAspectRatio: 4 / 3,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
             ),
       itemCount: data.length,
       itemBuilder: (context, index) {
@@ -427,8 +455,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  // ポートフォリオ専用のGridView (PortfolioDisplayDataを受け取る)
-  Widget _buildPortfolioGridView(List<PortfolioDisplayData> data, bool showRemoveButton, bool isDefaultSection) {
+  Widget _buildPortfolioGridView(List<PortfolioDisplayData> data, bool showButtons, bool isDefaultSection) {
     return GridView.builder(
       padding: const EdgeInsets.all(16.0),
       shrinkWrap: true,
@@ -436,13 +463,13 @@ class _MyHomePageState extends State<MyHomePage> {
       gridDelegate: isDefaultSection
           ? const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              childAspectRatio: 1.0 / 1.0, // Changed from 2.0 / 2.5 to 1.0 / 1.0
+              childAspectRatio: 1.0 / 1.0,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
             )
           : const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 250, // Changed from 420 to 200
-              childAspectRatio: 1.0 / 1.2, // Changed from 2.0 / 2.5 to 1.0 / 1.0
+              maxCrossAxisExtent: 250,
+              childAspectRatio: 1.0 / 1.2,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
             ),
@@ -452,7 +479,8 @@ class _MyHomePageState extends State<MyHomePage> {
         return StockCard(
           financialData: item.financialData,
           portfolioItem: item.portfolioItem,
-          onRemove: showRemoveButton ? () => _removeStock(index) : null,
+          onEdit: showButtons ? () => _showEditStockDialog(index) : null,
+          onRemove: showButtons ? () => _removeStock(index) : null,
         );
       },
     );
@@ -506,18 +534,136 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
+
+  void _showEditStockDialog(int index) {
+    final currentItem = _portfolioItems[index];
+    final quantityController = TextEditingController(text: currentItem.quantity.toString());
+    final priceController = TextEditingController(text: currentItem.acquisitionPrice.toString());
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit ${currentItem.code}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: quantityController,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Quantity'),
+            ),
+            TextField(
+              controller: priceController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Acquisition Price'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final quantity = int.tryParse(quantityController.text) ?? 0;
+              final price = double.tryParse(priceController.text) ?? 0.0;
+              _editStock(index, quantity, price);
+              Navigator.of(context).pop();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- Popover Widget for Settings ---
+class UpdateIntervalPicker extends StatefulWidget {
+  const UpdateIntervalPicker({super.key});
+
+  @override
+  State<UpdateIntervalPicker> createState() => _UpdateIntervalPickerState();
+}
+
+class _UpdateIntervalPickerState extends State<UpdateIntervalPicker> {
+  int _updateInterval = 60;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _updateInterval = prefs.getInt(updateIntervalKey) ?? 60;
+    });
+  }
+
+  Future<void> _setUpdateInterval(int? value) async {
+    if (value == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(updateIntervalKey, value);
+    setState(() {
+      _updateInterval = value;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Update Interval', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Divider(),
+          RadioListTile<int>(
+            title: const Text('30 seconds'),
+            value: 30,
+            groupValue: _updateInterval,
+            onChanged: _setUpdateInterval,
+          ),
+          RadioListTile<int>(
+            title: const Text('1 minute'),
+            value: 60,
+            groupValue: _updateInterval,
+            onChanged: _setUpdateInterval,
+          ),
+          RadioListTile<int>(
+            title: const Text('5 minutes'),
+            value: 300,
+            groupValue: _updateInterval,
+            onChanged: _setUpdateInterval,
+          ),
+          RadioListTile<int>(
+            title: const Text('Manual Only'),
+            value: 0,
+            groupValue: _updateInterval,
+            onChanged: _setUpdateInterval,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // --- Stock Card Widget ---
 class StockCard extends StatelessWidget {
   final FinancialData financialData;
-  final PortfolioItem? portfolioItem; // ポートフォリオアイテムはオプション
+  final PortfolioItem? portfolioItem;
+  final VoidCallback? onEdit;
   final VoidCallback? onRemove;
 
   const StockCard({
     super.key,
     required this.financialData,
     this.portfolioItem,
+    this.onEdit,
     this.onRemove,
   });
 
@@ -525,7 +671,6 @@ class StockCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final changeColor = financialData.previousDayChange.startsWith('-') ? Colors.red : Colors.green;
 
-    // 評価額と損益の計算
     double? currentValueNum = double.tryParse(financialData.currentValue.replaceAll(',', ''));
     double? estimatedValue;
     double? profitLoss;
@@ -546,7 +691,6 @@ class StockCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // 銘柄名とコード
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -562,7 +706,6 @@ class StockCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                // 株価情報
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -586,7 +729,6 @@ class StockCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                // ポートフォリオ情報 (存在する場合のみ表示)
                 if (portfolioItem != null)
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -604,14 +746,30 @@ class StockCard extends StatelessWidget {
               ],
             ),
           ),
-          if (onRemove != null)
+          if (onEdit != null || onRemove != null)
             Positioned(
-              top: 4,
-              right: 4,
-              child: IconButton(
-                icon: const Icon(Icons.close, size: 20),
-                onPressed: onRemove,
-                tooltip: 'Remove from Portfolio',
+              top: 0,
+              right: 0,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (onEdit != null)
+                    IconButton(
+                      icon: const Icon(Icons.edit, size: 20),
+                      onPressed: onEdit,
+                      tooltip: 'Edit Portfolio Item',
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                    ),
+                  if (onRemove != null)
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: onRemove,
+                      tooltip: 'Remove from Portfolio',
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                    ),
+                ],
               ),
             ),
         ],
@@ -619,5 +777,3 @@ class StockCard extends StatelessWidget {
     );
   }
 }
-
-
