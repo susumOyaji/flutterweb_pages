@@ -137,15 +137,21 @@ class _MyHomePageState extends State<MyHomePage> {
   List<PortfolioDisplayData> _portfolioDisplayData = []; // 型をPortfolioDisplayDataに変更
   String _statusMessage = '';
   String _rawResponse = '';
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _portfolioItems = List.from(initialPortfolioItems); // 初期データをコピー
     _callWorker();
+    _timer = Timer.periodic(const Duration(seconds: 60), (Timer t) => _callWorker());
   }
 
-  // --- Data Persistence ---
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
   Future<void> _loadPortfolio() async {
     // この関数はmain()で呼び出されるため、ここでは不要
   }

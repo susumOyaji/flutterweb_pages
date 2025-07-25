@@ -58,3 +58,6 @@ node_modules/
 #https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes=USDJPY=FX
 #flutter run -d chrome --web-hostname localhost --web-port 8000
 
+# Flutter build outputs
+flutter_web/build/
+!flutter_web/build/web/
