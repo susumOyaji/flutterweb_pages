@@ -1,0 +1,55 @@
+# Rust
+/target/
+Cargo.lock
+
+#Cloudflare Workers
+.wrangler
+
+# WebAssembly build outputs
+#pkg/*.wasm
+#pkg/*.js
+#pkg/LICENSE-*
+#pkg/README.md
+pkg/.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node modules (if any)
+node_modules/
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+#gemini
+#$ gemini          # 対話モードへ移行
+#> /chat save rust-session
+#> /chat list
+#> /chat resume rust-session
+#https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes=USDJPY=FX
