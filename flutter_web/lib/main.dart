@@ -399,7 +399,7 @@ class _MyHomePageState extends State<MyHomePage> {
       physics: const NeverScrollableScrollPhysics(), // Important for ListView
       gridDelegate: isDefaultSection
           ? const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3, // デフォルト銘柄は常に3列
+              crossAxisCount: 4, // デフォルト銘柄は常に3列
               childAspectRatio: 1.0 / 1.0, // アイテムの幅と高さの比率
               crossAxisSpacing: 16, // 水平方向のスペース
               mainAxisSpacing: 16, // 垂直方向のスペース
@@ -435,7 +435,7 @@ class _MyHomePageState extends State<MyHomePage> {
               mainAxisSpacing: 16,
             )
           : const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 200, // Changed from 420 to 200
+              maxCrossAxisExtent: 150, // Changed from 420 to 200
               childAspectRatio: 1.0 / 1.0, // Changed from 2.0 / 2.5 to 1.0 / 1.0
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
