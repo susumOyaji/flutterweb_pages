@@ -286,6 +286,10 @@ class _MyHomePageState extends State<MyHomePage> {
           if (_defaultFinancialData.isNotEmpty)
             _buildGridView(_defaultFinancialData, false, true),
 
+          // Total P/L Section
+          if (_portfolioDisplayData.isNotEmpty)
+            _buildTotalProfitLoss(),
+
           // My Portfolio Section
           _buildSectionHeader(context, 'My Portfolio'),
           if (_portfolioDisplayData.isNotEmpty)
@@ -293,7 +297,7 @@ class _MyHomePageState extends State<MyHomePage> {
           else if (_portfolioItems.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-              child: Center(child: Text('Your portfolio is empty. Add stocks using the '+' button.')),
+              child: Center(child: Text('Your portfolio is empty. Add stocks using the ' + ' button.')),
             ),
 
           // Raw Response Section
@@ -327,6 +331,67 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  // --- Total P/L Calculation and Widget ---
+  Map<String, double> _calculateTotalPortfolioMetrics() {
+    double totalAcquisitionCost = 0;
+    double totalEstimatedValue = 0;
+
+    for (final item in _portfolioDisplayData) {
+      final currentValueNum = double.tryParse(item.financialData.currentValue.replaceAll(',', ''));
+      if (currentValueNum != null) {
+        totalAcquisitionCost += item.portfolioItem.acquisitionPrice * item.portfolioItem.quantity;
+        totalEstimatedValue += currentValueNum * item.portfolioItem.quantity;
+      }
+    }
+
+    final totalProfitLoss = totalEstimatedValue - totalAcquisitionCost;
+    return {'totalEstimatedValue': totalEstimatedValue, 'totalProfitLoss': totalProfitLoss,};
+  }
+
+  Widget _buildTotalProfitLoss() {
+    final metrics = _calculateTotalPortfolioMetrics();
+    final totalEstimatedValue = metrics['totalEstimatedValue']!;
+    final totalProfitLoss = metrics['totalProfitLoss']!;
+    final profitLossColor = totalProfitLoss >= 0 ? Colors.green : Colors.red;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Text(
+              'Total Portfolio Value',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '¥${totalEstimatedValue.toStringAsFixed(2)}',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Total P/L: ',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                Text(
+                  '¥${totalProfitLoss.toStringAsFixed(2)}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: profitLossColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildGridView(List<FinancialData> data, bool showRemoveButton, bool isDefaultSection) {
     return GridView.builder(
       padding: const EdgeInsets.all(16.0),
@@ -335,7 +400,7 @@ class _MyHomePageState extends State<MyHomePage> {
       gridDelegate: isDefaultSection
           ? const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3, // デフォルト銘柄は常に3列
-              childAspectRatio: 3 / 1.0, // アイテムの幅と高さの比率
+              childAspectRatio: 1.0 / 1.0, // アイテムの幅と高さの比率
               crossAxisSpacing: 16, // 水平方向のスペース
               mainAxisSpacing: 16, // 垂直方向のスペース
             )
@@ -365,13 +430,13 @@ class _MyHomePageState extends State<MyHomePage> {
       gridDelegate: isDefaultSection
           ? const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              childAspectRatio: 3 / 2.5,
+              childAspectRatio: 1.0 / 1.0, // Changed from 2.0 / 2.5 to 1.0 / 1.0
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
             )
           : const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 420,
-              childAspectRatio: 3 / 2.5,
+              maxCrossAxisExtent: 200, // Changed from 420 to 200
+              childAspectRatio: 1.0 / 1.0, // Changed from 2.0 / 2.5 to 1.0 / 1.0
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
             ),
