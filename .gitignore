@@ -53,3 +53,4 @@ node_modules/
 #> /chat list
 #> /chat resume rust-session
 #https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes=USDJPY=FX
+#flutter run -d chrome --web-hostname localhost --web-port 8000
