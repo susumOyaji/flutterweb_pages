@@ -61,3 +61,5 @@ node_modules/
 # Flutter build outputs
 flutter_web/build/
 !flutter_web/build/web/
+
+#flutter build web --release
