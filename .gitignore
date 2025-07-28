@@ -62,4 +62,5 @@ node_modules/
 flutter_web/build/
 !flutter_web/build/web/
 
+#flutter run -d chrome --web-hostname localhost --web-port 8000
 #flutter build web --release

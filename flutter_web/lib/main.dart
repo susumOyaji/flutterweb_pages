@@ -333,7 +333,7 @@ class _MyHomePageState extends State<MyHomePage> {
           else if (_portfolioItems.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-              child: Center(child: Text('Your portfolio is empty. Add stocks using the ' + ' button.')),
+              child: Center(child: Text('Your portfolio is empty. Add stocks using the  +(Pulse) button.')),
             ),
 
           if (_rawResponse.isNotEmpty)
@@ -686,7 +686,7 @@ class StockCard extends StatelessWidget {
       child: Stack(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 32.0, bottom: 8.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
