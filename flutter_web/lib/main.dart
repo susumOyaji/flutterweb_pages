@@ -207,6 +207,33 @@ class _MyHomePageState extends State<MyHomePage> {
     await _callWorker();
   }
 
+  void _showRemoveStockConfirmDialog(int index) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Deletion'),
+          content: const Text('Are you sure you want to remove this stock from your portfolio?\nこの株をポートフォリオから削除してもいいですか？'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop(); // ダイアログを閉じる
+              },
+            ),
+            TextButton(
+              child: const Text('Remove'),
+              onPressed: () {
+                Navigator.of(context).pop(); // ダイアログを閉じる
+                _removeStock(index); // 削除を実行
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   // --- API Call ---
   Future<void> _callWorker() async {
     setState(() {
@@ -480,7 +507,7 @@ class _MyHomePageState extends State<MyHomePage> {
           financialData: item.financialData,
           portfolioItem: item.portfolioItem,
           onEdit: showButtons ? () => _showEditStockDialog(index) : null,
-          onRemove: showButtons ? () => _removeStock(index) : null,
+          onRemove: showButtons ? () => _showRemoveStockConfirmDialog(index) : null,
         );
       },
     );
