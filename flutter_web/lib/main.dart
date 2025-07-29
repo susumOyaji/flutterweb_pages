@@ -461,7 +461,7 @@ class _MyHomePageState extends State<MyHomePage> {
       gridDelegate: isDefaultSection
           ? const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              childAspectRatio: 1.0 / 0.5,
+              childAspectRatio: 1.0 / 0.35, // 0.5 * 0.7
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
             )
@@ -477,6 +477,7 @@ class _MyHomePageState extends State<MyHomePage> {
         return StockCard(
           financialData: item,
           onRemove: showRemoveButton ? () => _removeStock(index) : null,
+          padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0, bottom: 8.0),
         );
       },
     );
@@ -508,6 +509,7 @@ class _MyHomePageState extends State<MyHomePage> {
           portfolioItem: item.portfolioItem,
           onEdit: showButtons ? () => _showEditStockDialog(index) : null,
           onRemove: showButtons ? () => _showRemoveStockConfirmDialog(index) : null,
+          padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 32.0, bottom: 8.0),
         );
       },
     );
@@ -685,6 +687,7 @@ class StockCard extends StatelessWidget {
   final PortfolioItem? portfolioItem;
   final VoidCallback? onEdit;
   final VoidCallback? onRemove;
+  final EdgeInsetsGeometry? padding;
 
   const StockCard({
     super.key,
@@ -692,6 +695,7 @@ class StockCard extends StatelessWidget {
     this.portfolioItem,
     this.onEdit,
     this.onRemove,
+    this.padding,
   });
 
   @override
@@ -713,7 +717,7 @@ class StockCard extends StatelessWidget {
       child: Stack(
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 32.0, bottom: 8.0),
+            padding: padding ?? const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0, bottom: 8.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
