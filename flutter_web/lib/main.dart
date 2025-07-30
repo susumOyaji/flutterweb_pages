@@ -126,7 +126,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final List<String> _defaultCodes = const ['^DJI', '998407.O', 'USDJPY=X'];
+  final List<String> _defaultCodes = const ['^DJI', '998407.O', 'USDJPY=FX'];
   List<PortfolioItem> _portfolioItems = [];
   List<FinancialData> _defaultFinancialData = [];
   List<PortfolioDisplayData> _portfolioDisplayData = [];
