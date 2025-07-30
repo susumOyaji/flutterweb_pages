@@ -741,9 +741,19 @@ class StockCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      financialData.currentValue,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+                    Column( // Add a Column here to stack currentValue and bidValue
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          financialData.currentValue,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+                        ),
+                        if (financialData.bidValue != null && financialData.bidValue!.isNotEmpty) // Only show if not null or empty
+                          Text(
+                            '${financialData.bidValue}',
+                            style: TextStyle(color: const Color.fromARGB(255, 2, 2, 2), fontWeight: FontWeight.bold,fontSize: 22),
+                          ),
+                      ],
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
