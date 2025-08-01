@@ -15,11 +15,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   final List<String>? jsonStrings = prefs.getStringList(portfolioKey);
-  initialPortfolioItems = jsonStrings
-          ?.map((jsonString) =>
-              PortfolioItem.fromJson(json.decode(jsonString)))
-          .toList() ??
-      [];
+  initialPortfolioItems =
+      jsonStrings?.map((jsonString) => PortfolioItem.fromJson(json.decode(jsonString))).toList() ?? [];
 
   runApp(const MyApp());
 }
@@ -62,17 +59,9 @@ class PortfolioItem {
   final int quantity;
   final double acquisitionPrice;
 
-  const PortfolioItem({
-    required this.code,
-    required this.quantity,
-    required this.acquisitionPrice,
-  });
+  const PortfolioItem({required this.code, required this.quantity, required this.acquisitionPrice});
 
-  Map<String, dynamic> toJson() => {
-        'code': code,
-        'quantity': quantity,
-        'acquisitionPrice': acquisitionPrice,
-      };
+  Map<String, dynamic> toJson() => {'code': code, 'quantity': quantity, 'acquisitionPrice': acquisitionPrice};
 
   factory PortfolioItem.fromJson(Map<String, dynamic> json) {
     return PortfolioItem(
@@ -87,10 +76,7 @@ class PortfolioDisplayData {
   final FinancialData financialData;
   final PortfolioItem portfolioItem;
 
-  const PortfolioDisplayData({
-    required this.financialData,
-    required this.portfolioItem,
-  });
+  const PortfolioDisplayData({required this.financialData, required this.portfolioItem});
 }
 
 // --- App ---
@@ -103,12 +89,7 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Stock Ticker',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        cardTheme: CardTheme(
-          elevation: 4.0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-        ),
+        cardTheme: CardTheme(elevation: 4.0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0))),
       ),
       home: const MyHomePage(title: 'Market & Portfolio'),
     );
@@ -160,8 +141,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _savePortfolio() async {
     final prefs = await SharedPreferences.getInstance();
-    final List<String> jsonStrings =
-        _portfolioItems.map((item) => json.encode(item.toJson())).toList();
+    final List<String> jsonStrings = _portfolioItems.map((item) => json.encode(item.toJson())).toList();
     await prefs.setStringList(portfolioKey, jsonStrings);
   }
 
@@ -170,11 +150,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final upperCaseCode = code.toUpperCase();
     if (upperCaseCode.isNotEmpty && quantity > 0 && acquisitionPrice >= 0) {
       setState(() {
-        _portfolioItems.add(PortfolioItem(
-          code: upperCaseCode,
-          quantity: quantity,
-          acquisitionPrice: acquisitionPrice,
-        ));
+        _portfolioItems.add(PortfolioItem(code: upperCaseCode, quantity: quantity, acquisitionPrice: acquisitionPrice));
       });
       await _savePortfolio();
       await Future.delayed(const Duration(milliseconds: 100));
@@ -213,7 +189,9 @@ class _MyHomePageState extends State<MyHomePage> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Confirm Deletion'),
-          content: const Text('Are you sure you want to remove this stock from your portfolio?\nこの株をポートフォリオから削除してもいいですか？'),
+          content: const Text(
+            'Are you sure you want to remove this stock from your portfolio?\nこの株をポートフォリオから削除してもいいですか？',
+          ),
           actions: <Widget>[
             TextButton(
               child: const Text('Cancel'),
@@ -242,12 +220,12 @@ class _MyHomePageState extends State<MyHomePage> {
 
     final allCodesSet = <String>{..._defaultCodes, ..._portfolioItems.map((e) => e.code)};
     if (allCodesSet.isEmpty) {
-        setState(() {
-            _statusMessage = 'No stocks to display.';
-            _defaultFinancialData = [];
-            _portfolioDisplayData = [];
-        });
-        return;
+      setState(() {
+        _statusMessage = 'No stocks to display.';
+        _defaultFinancialData = [];
+        _portfolioDisplayData = [];
+      });
+      return;
     }
 
     final codes = allCodesSet.join(',');
@@ -257,29 +235,24 @@ class _MyHomePageState extends State<MyHomePage> {
       final response = await http.get(Uri.parse(workerUrl));
       if (response.statusCode == 200) {
         final decoded = json.decode(utf8.decode(response.bodyBytes));
-        final List<FinancialData> fetchedData = (decoded['data'] as List)
-            .map((item) => FinancialData.fromJson(item))
-            .toList();
+        final List<FinancialData> fetchedData =
+            (decoded['data'] as List).map((item) => FinancialData.fromJson(item)).toList();
 
-        final Map<String, FinancialData> dataMap = {
-          for (var data in fetchedData) data.code: data
-        };
+        final Map<String, FinancialData> dataMap = {for (var data in fetchedData) data.code: data};
 
         setState(() {
-          _defaultFinancialData = _defaultCodes
-              .map((code) => dataMap[code])
-              .whereType<FinancialData>()
-              .toList();
+          _defaultFinancialData = _defaultCodes.map((code) => dataMap[code]).whereType<FinancialData>().toList();
 
-          _portfolioDisplayData = _portfolioItems
-              .map((item) {
-                final financialData = dataMap[item.code];
-                return financialData != null
-                    ? PortfolioDisplayData(financialData: financialData, portfolioItem: item)
-                    : null;
-              })
-              .whereType<PortfolioDisplayData>()
-              .toList();
+          _portfolioDisplayData =
+              _portfolioItems
+                  .map((item) {
+                    final financialData = dataMap[item.code];
+                    return financialData != null
+                        ? PortfolioDisplayData(financialData: financialData, portfolioItem: item)
+                        : null;
+                  })
+                  .whereType<PortfolioDisplayData>()
+                  .toList();
 
           _statusMessage = '';
           const jsonEncoder = JsonEncoder.withIndent('  ');
@@ -306,32 +279,26 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _showAddStockDialog,
-            tooltip: 'Add Stock to Portfolio',
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _callWorker,
-            tooltip: 'Refresh Data',
-          ),
-          Builder( // Builderを追加してPopoverのcontextを正しく取得
-            builder: (context) => IconButton(
-              icon: const Icon(Icons.timer_outlined),
-              onPressed: () {
-                showPopover(
-                  context: context,
-                  bodyBuilder: (context) => const UpdateIntervalPicker(),
-                  onPop: () => _setupTimer(), // Popoverが閉じたらタイマーを再設定
-                  direction: PopoverDirection.bottom,
-                  width: 250,
-                  arrowHeight: 15,
-                  arrowWidth: 30,
-                );
-              },
-              tooltip: 'Set Update Interval',
-            ),
+          IconButton(icon: const Icon(Icons.add), onPressed: _showAddStockDialog, tooltip: 'Add Stock to Portfolio'),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _callWorker, tooltip: 'Refresh Data'),
+          Builder(
+            // Builderを追加してPopoverのcontextを正しく取得
+            builder:
+                (context) => IconButton(
+                  icon: const Icon(Icons.timer_outlined),
+                  onPressed: () {
+                    showPopover(
+                      context: context,
+                      bodyBuilder: (context) => const UpdateIntervalPicker(),
+                      onPop: () => _setupTimer(), // Popoverが閉じたらタイマーを再設定
+                      direction: PopoverDirection.bottom,
+                      width: 250,
+                      arrowHeight: 15,
+                      arrowWidth: 30,
+                    );
+                  },
+                  tooltip: 'Set Update Interval',
+                ),
           ),
         ],
       ),
@@ -346,13 +313,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 textAlign: TextAlign.center,
               ),
             ),
-          if (_defaultFinancialData.isNotEmpty)
-            _buildSectionHeader(context, 'Default Market Data'),
-          if (_defaultFinancialData.isNotEmpty)
-            _buildGridView(_defaultFinancialData, false, true),
+          if (_defaultFinancialData.isNotEmpty) _buildSectionHeader(context, 'Default Market Data'),
+          if (_defaultFinancialData.isNotEmpty) _buildGridView(_defaultFinancialData, false, true),
 
-          if (_portfolioDisplayData.isNotEmpty)
-            _buildTotalProfitLoss(),
+          if (_portfolioDisplayData.isNotEmpty) _buildTotalProfitLoss(),
 
           _buildSectionHeader(context, 'My Portfolio'),
           if (_portfolioDisplayData.isNotEmpty)
@@ -386,10 +350,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 8.0),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-      ),
+      child: Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
     );
   }
 
@@ -406,7 +367,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     final totalProfitLoss = totalEstimatedValue - totalAcquisitionCost;
-    return {'totalEstimatedValue': totalEstimatedValue, 'totalProfitLoss': totalProfitLoss,};
+    return {'totalEstimatedValue': totalEstimatedValue, 'totalProfitLoss': totalProfitLoss};
   }
 
   Widget _buildTotalProfitLoss() {
@@ -421,10 +382,7 @@ class _MyHomePageState extends State<MyHomePage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text(
-              'Total Portfolio Value',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('Total Portfolio Value', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
               '¥${totalEstimatedValue.toStringAsFixed(2)}',
@@ -434,16 +392,12 @@ class _MyHomePageState extends State<MyHomePage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  'Total P/L: ',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
+                Text('Total P/L: ', style: Theme.of(context).textTheme.titleMedium),
                 Text(
                   '¥${totalProfitLoss.toStringAsFixed(2)}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: profitLossColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(color: profitLossColor, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -458,19 +412,20 @@ class _MyHomePageState extends State<MyHomePage> {
       padding: const EdgeInsets.all(16.0),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: isDefaultSection
-          ? const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 1.0 / 0.35, // 0.5 * 0.7
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            )
-          : const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 420,
-              childAspectRatio: 4 / 3,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
+      gridDelegate:
+          isDefaultSection
+              ? const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 1.0 / 0.35, // 0.5 * 0.7
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              )
+              : const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 420,
+                childAspectRatio: 4 / 3,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
       itemCount: data.length,
       itemBuilder: (context, index) {
         final item = data[index];
@@ -488,19 +443,20 @@ class _MyHomePageState extends State<MyHomePage> {
       padding: const EdgeInsets.all(16.0),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: isDefaultSection
-          ? const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 1.0 / 1.0,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            )
-          : const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 250,
-              childAspectRatio: 1.0 / 1.2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
+      gridDelegate:
+          isDefaultSection
+              ? const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 5,
+                childAspectRatio: 1.0 / 1.0,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              )
+              : const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 250,
+                childAspectRatio: 1.0 / 1.2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
       itemCount: data.length,
       itemBuilder: (context, index) {
         final item = data[index];
@@ -522,45 +478,43 @@ class _MyHomePageState extends State<MyHomePage> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Stock to Portfolio'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: codeController,
-              autofocus: true,
-              decoration: const InputDecoration(hintText: 'Stock Code (e.g., AAPL)'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Add Stock to Portfolio'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: codeController,
+                  autofocus: true,
+                  decoration: const InputDecoration(hintText: 'Stock Code (e.g., AAPL)'),
+                ),
+                TextField(
+                  controller: quantityController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(hintText: 'Quantity'),
+                ),
+                TextField(
+                  controller: priceController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(hintText: 'Acquisition Price'),
+                ),
+              ],
             ),
-            TextField(
-              controller: quantityController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(hintText: 'Quantity'),
-            ),
-            TextField(
-              controller: priceController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(hintText: 'Acquisition Price'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () {
+                  final code = codeController.text;
+                  final quantity = int.tryParse(quantityController.text) ?? 0;
+                  final price = double.tryParse(priceController.text) ?? 0.0;
+                  _addStock(code, quantity, price);
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Add'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              final code = codeController.text;
-              final quantity = int.tryParse(quantityController.text) ?? 0;
-              final price = double.tryParse(priceController.text) ?? 0.0;
-              _addStock(code, quantity, price);
-              Navigator.of(context).pop();
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -571,40 +525,38 @@ class _MyHomePageState extends State<MyHomePage> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Edit ${currentItem.code}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: quantityController,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Quantity'),
+      builder:
+          (context) => AlertDialog(
+            title: Text('Edit ${currentItem.code}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: quantityController,
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Quantity'),
+                ),
+                TextField(
+                  controller: priceController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: 'Acquisition Price'),
+                ),
+              ],
             ),
-            TextField(
-              controller: priceController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Acquisition Price'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () {
+                  final quantity = int.tryParse(quantityController.text) ?? 0;
+                  final price = double.tryParse(priceController.text) ?? 0.0;
+                  _editStock(index, quantity, price);
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Save'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              final quantity = int.tryParse(quantityController.text) ?? 0;
-              final price = double.tryParse(priceController.text) ?? 0.0;
-              _editStock(index, quantity, price);
-              Navigator.of(context).pop();
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -701,6 +653,7 @@ class StockCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final changeColor = financialData.previousDayChange.startsWith('-') ? Colors.red : Colors.green;
+    final changeRateColor = financialData.changeRate.startsWith('-') ? Colors.red : Colors.green;
 
     double? currentValueNum = double.tryParse(financialData.currentValue.replaceAll(',', ''));
     double? estimatedValue;
@@ -741,33 +694,53 @@ class StockCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Column( // Add a Column here to stack currentValue and bidValue
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          financialData.currentValue,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-                        ),
-                        if (financialData.bidValue != null && financialData.bidValue!.isNotEmpty) // Only show if not null or empty
+                        if (financialData.code != 'USDJPY=FX')
+                          Text(
+                            financialData.currentValue,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+                          ),
+                        if (financialData.bidValue != null && financialData.bidValue!.isNotEmpty)
                           Text(
                             '${financialData.bidValue}',
-                            style: TextStyle(color: const Color.fromARGB(255, 2, 2, 2), fontWeight: FontWeight.bold,fontSize: 22),
+                            style: TextStyle(
+                              color: const Color.fromARGB(255, 2, 2, 2),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 22,
+                            ),
                           ),
                       ],
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          financialData.previousDayChange,
-                          style: TextStyle(color: changeColor, fontSize: 16),
-                        ),
-                        Text(
-                          '(${financialData.changeRate}%)',
-                          style: TextStyle(color: changeColor),
-                        ),
-                      ],
-                    ),
+                    if (financialData.code != 'USDJPY=FX')
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(financialData.previousDayChange, style: TextStyle(color: changeColor, fontSize: 16)),
+                          Text('(${financialData.changeRate}%)', style: TextStyle(color: changeColor)),
+                        ],
+                      )
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'P/L: ',
+                                  style: const TextStyle(fontSize: 16, color: Colors.blue), // 文字部分は青
+                                ),
+                                TextSpan(
+                                  text: financialData.changeRate,
+                                  style: TextStyle(fontSize: 16, color: changeRateColor), // 数値部分は正負で色分け
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
                 if (portfolioItem != null)
@@ -778,10 +751,11 @@ class StockCard extends StatelessWidget {
                       Text('Quantity: ${portfolioItem!.quantity}'),
                       Text('Acq. Price: ${portfolioItem!.acquisitionPrice.toStringAsFixed(2)}'),
                       if (estimatedValue != null) Text('Est. Value: ${estimatedValue.toStringAsFixed(2)}'),
-                      if (profitLoss != null) Text(
-                        'P/L: ${profitLoss.toStringAsFixed(2)}',
-                        style: TextStyle(color: profitLossColor, fontWeight: FontWeight.bold),
-                      ),
+                      if (profitLoss != null)
+                        Text(
+                          'P/L: ${profitLoss.toStringAsFixed(2)}',
+                          style: TextStyle(color: profitLossColor, fontWeight: FontWeight.bold),
+                        ),
                     ],
                   ),
               ],
