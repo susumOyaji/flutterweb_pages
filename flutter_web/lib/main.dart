@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:popover/popover.dart'; // popoverをインポート
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:responsive_framework/responsive_framework.dart'; // 追加
 
 // トップレベルで定義
 const String portfolioKey = 'portfolio_items';
@@ -91,6 +92,16 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         cardTheme: CardTheme(elevation: 4.0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0))),
       ),
+      builder: (context, child) => ResponsiveBreakpoints.builder(
+        child: child!,
+        breakpoints: [
+          const Breakpoint(start: 0, end: 450, name: MOBILE),
+          const Breakpoint(start: 451, end: 800, name: TABLET),
+          const Breakpoint(start: 801, end: 1920, name: DESKTOP),
+          const Breakpoint(start: 1921, end: double.infinity, name: '4K'),
+        ],
+      ),
+
       home: const MyHomePage(title: 'Market & Portfolio'),
     );
   }
