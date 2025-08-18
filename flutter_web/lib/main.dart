@@ -3,13 +3,14 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:popover/popover.dart'; // popoverをインポート
+import 'package:popover/popover.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:responsive_framework/responsive_framework.dart'; // 追加
+import 'package:responsive_framework/responsive_framework.dart';
 
-// トップレベルで定義
+// --- Global Keys and Constants ---
 const String portfolioKey = 'portfolio_items';
-const String updateIntervalKey = 'update_interval'; // キーをここに移動
+const String updateIntervalKey = 'update_interval';
+const String themeModeKey = 'theme_mode'; // Key for storing theme
 late List<PortfolioItem> initialPortfolioItems;
 
 void main() async {
@@ -81,17 +82,58 @@ class PortfolioDisplayData {
 }
 
 // --- App ---
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  ThemeMode _themeMode = ThemeMode.light; // Default theme
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThemeMode();
+  }
+
+  Future<void> _loadThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Load the theme mode index, defaulting to light mode if not found.
+    final themeIndex = prefs.getInt(themeModeKey) ?? ThemeMode.light.index;
+    setState(() {
+      _themeMode = ThemeMode.values[themeIndex];
+    });
+  }
+
+  void changeTheme(ThemeMode themeMode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(themeModeKey, themeMode.index);
+    setState(() {
+      _themeMode = themeMode;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Stock Ticker',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.light,
+        ),
         cardTheme: CardTheme(elevation: 4.0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0))),
       ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
+        cardTheme: CardTheme(elevation: 4.0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0))),
+      ),
+      themeMode: _themeMode, // Use state variable to control theme
       builder: (context, child) => ResponsiveBreakpoints.builder(
         child: child!,
         breakpoints: [
@@ -101,7 +143,6 @@ class MyApp extends StatelessWidget {
           const Breakpoint(start: 1921, end: double.infinity, name: '4K'),
         ],
       ),
-
       home: const MyHomePage(title: 'Market & Portfolio'),
     );
   }
@@ -140,6 +181,18 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
+  // --- Theme Toggle ---
+  void _toggleTheme() {
+    // Find the state of the root widget (_MyAppState)
+    final myAppState = context.findAncestorStateOfType<_MyAppState>();
+    if (myAppState == null) return;
+
+    final currentMode = myAppState._themeMode;
+    // Toggle between light and dark mode
+    final newMode = currentMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    myAppState.changeTheme(newMode);
+  }
+
   // --- Timer Setup ---
   Future<void> _setupTimer() async {
     _timer?.cancel();
@@ -164,7 +217,6 @@ class _MyHomePageState extends State<MyHomePage> {
         _portfolioItems.add(PortfolioItem(code: upperCaseCode, quantity: quantity, acquisitionPrice: acquisitionPrice));
       });
       await _savePortfolio();
-      await Future.delayed(const Duration(milliseconds: 100));
       await _callWorker();
     }
   }
@@ -180,7 +232,6 @@ class _MyHomePageState extends State<MyHomePage> {
         );
       });
       await _savePortfolio();
-      await Future.delayed(const Duration(milliseconds: 100));
       await _callWorker();
     }
   }
@@ -190,7 +241,6 @@ class _MyHomePageState extends State<MyHomePage> {
       _portfolioItems.removeAt(index);
     });
     await _savePortfolio();
-    await Future.delayed(const Duration(milliseconds: 100));
     await _callWorker();
   }
 
@@ -207,14 +257,14 @@ class _MyHomePageState extends State<MyHomePage> {
             TextButton(
               child: const Text('Cancel'),
               onPressed: () {
-                Navigator.of(context).pop(); // ダイアログを閉じる
+                Navigator.of(context).pop();
               },
             ),
             TextButton(
               child: const Text('Remove'),
               onPressed: () {
-                Navigator.of(context).pop(); // ダイアログを閉じる
-                _removeStock(index); // 削除を実行
+                Navigator.of(context).pop();
+                _removeStock(index);
               },
             ),
           ],
@@ -286,14 +336,21 @@ class _MyHomePageState extends State<MyHomePage> {
   // --- UI ---
   @override
   Widget build(BuildContext context) {
+    // Check the current brightness to set the toggle icon appropriately
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
+          IconButton(
+            icon: Icon(isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
+            onPressed: _toggleTheme,
+            tooltip: 'Toggle Theme',
+          ),
           IconButton(icon: const Icon(Icons.add), onPressed: _showAddStockDialog, tooltip: 'Add Stock to Portfolio'),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _callWorker, tooltip: 'Refresh Data'),
           Builder(
-            // Builderを追加してPopoverのcontextを正しく取得
             builder:
                 (context) => IconButton(
                   icon: const Icon(Icons.timer_outlined),
@@ -301,7 +358,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     showPopover(
                       context: context,
                       bodyBuilder: (context) => const UpdateIntervalPicker(),
-                      onPop: () => _setupTimer(), // Popoverが閉じたらタイマーを再設定
+                      onPop: () => _setupTimer(),
                       direction: PopoverDirection.bottom,
                       width: 250,
                       arrowHeight: 15,
@@ -507,7 +564,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
                 TextField(
                   controller: priceController,
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(hintText: 'Acquisition Price'),
                 ),
               ],
