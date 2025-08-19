@@ -166,12 +166,13 @@ class _MyHomePageState extends State<MyHomePage> {
   String _statusMessage = '';
   String _rawResponse = '';
   Timer? _timer;
+  bool _isLoading = false; // New state for loading status
 
   @override
   void initState() {
     super.initState();
     _portfolioItems = List.from(initialPortfolioItems);
-    _callWorker();
+    _callWorker(isInitialLoad: true); // Pass flag for initial load
     _setupTimer();
   }
 
@@ -274,61 +275,76 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   // --- API Call ---
-  Future<void> _callWorker() async {
+  Future<void> _callWorker({bool isInitialLoad = false}) async {
+    if (_isLoading) return; // Prevent concurrent calls
+
     setState(() {
-      _statusMessage = 'Loading...';
+      _isLoading = true;
+      if (isInitialLoad) {
+        _statusMessage = 'Loading...';
+      } else {
+        _statusMessage = ''; // Clear previous status on subsequent refreshes
+      }
+      _rawResponse = ''; // Clear previous raw response
     });
 
-    final allCodesSet = <String>{..._defaultCodes, ..._portfolioItems.map((e) => e.code)};
-    if (allCodesSet.isEmpty) {
-      setState(() {
-        _statusMessage = 'No stocks to display.';
-        _defaultFinancialData = [];
-        _portfolioDisplayData = [];
-      });
-      return;
-    }
-
-    final codes = allCodesSet.join(',');
-    final workerUrl = 'https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes=$codes';
-
     try {
-      final response = await http.get(Uri.parse(workerUrl));
-      if (response.statusCode == 200) {
-        final decoded = json.decode(utf8.decode(response.bodyBytes));
-        final List<FinancialData> fetchedData =
-            (decoded['data'] as List).map((item) => FinancialData.fromJson(item)).toList();
-
-        final Map<String, FinancialData> dataMap = {for (var data in fetchedData) data.code: data};
-
+      final allCodesSet = <String>{..._defaultCodes, ..._portfolioItems.map((e) => e.code)};
+      if (allCodesSet.isEmpty) {
         setState(() {
-          _defaultFinancialData = _defaultCodes.map((code) => dataMap[code]).whereType<FinancialData>().toList();
-
-          _portfolioDisplayData =
-              _portfolioItems
-                  .map((item) {
-                    final financialData = dataMap[item.code];
-                    return financialData != null
-                        ? PortfolioDisplayData(financialData: financialData, portfolioItem: item)
-                        : null;
-                  })
-                  .whereType<PortfolioDisplayData>()
-                  .toList();
-
-          _statusMessage = '';
-          const jsonEncoder = JsonEncoder.withIndent('  ');
-          _rawResponse = jsonEncoder.convert(decoded);
+          _statusMessage = 'No stocks to display.';
+          _defaultFinancialData = [];
+          _portfolioDisplayData = [];
         });
+        return;
+      }
+
+      final codes = allCodesSet.join(',');
+      final workerUrl = 'https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes=$codes';
+
+      final response = await http.get(Uri.parse(workerUrl));
+      final responseBody = utf8.decode(response.bodyBytes);
+
+      if (response.statusCode == 200) {
+        try {
+          final decoded = json.decode(responseBody);
+          final List<FinancialData> fetchedData =
+              (decoded['data'] as List).map((item) => FinancialData.fromJson(item)).toList();
+
+          final Map<String, FinancialData> dataMap = {for (var data in fetchedData) data.code: data};
+
+          setState(() {
+            _defaultFinancialData = _defaultCodes.map((code) => dataMap[code]).whereType<FinancialData>().toList();
+            _portfolioDisplayData = _portfolioItems.map((item) {
+              final financialData = dataMap[item.code];
+              return financialData != null
+                  ? PortfolioDisplayData(financialData: financialData, portfolioItem: item)
+                  : null;
+            }).whereType<PortfolioDisplayData>().toList();
+            _statusMessage = '';
+            const jsonEncoder = JsonEncoder.withIndent('  ');
+            _rawResponse = jsonEncoder.convert(decoded);
+          });
+        } on FormatException {
+          setState(() {
+            _statusMessage = 'Error: Invalid JSON response from server.';
+            _rawResponse = responseBody;
+          });
+        }
       } else {
         setState(() {
           _statusMessage = 'Error: ${response.statusCode}';
-          _rawResponse = response.body;
+          _rawResponse = responseBody;
         });
       }
     } catch (e) {
       setState(() {
         _statusMessage = 'Error: $e';
         _rawResponse = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
       });
     }
   }
@@ -349,7 +365,22 @@ class _MyHomePageState extends State<MyHomePage> {
             tooltip: 'Toggle Theme',
           ),
           IconButton(icon: const Icon(Icons.add), onPressed: _showAddStockDialog, tooltip: 'Add Stock to Portfolio'),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _callWorker, tooltip: 'Refresh Data'),
+          // Loading indicator and refresh button logic
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
+              child: SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(strokeWidth: 3.0),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _callWorker,
+              tooltip: 'Refresh Data',
+            ),
           Builder(
             builder:
                 (context) => IconButton(
@@ -372,7 +403,8 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: ListView(
         children: <Widget>[
-          if (_statusMessage.isNotEmpty && _defaultFinancialData.isEmpty && _portfolioDisplayData.isEmpty)
+          // Display status message only when loading or if there's an error and no data
+          if (_statusMessage.isNotEmpty && (_isLoading || (_defaultFinancialData.isEmpty && _portfolioDisplayData.isEmpty)))
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: Text(
@@ -389,7 +421,7 @@ class _MyHomePageState extends State<MyHomePage> {
           _buildSectionHeader(context, 'My Portfolio'),
           if (_portfolioDisplayData.isNotEmpty)
             _buildPortfolioGridView(_portfolioDisplayData, true, false)
-          else if (_portfolioItems.isEmpty)
+          else if (_portfolioItems.isEmpty && !_isLoading) // Don't show if loading
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
               child: Center(child: Text('Your portfolio is empty. Add stocks using the  +(Pulse) button.')),

@@ -37,15 +37,13 @@ export async function onRequest(context) {
     // 既存のWorkerへのリクエストを転送
     const workerResponse = await fetch(workerFetchUrl, fetchOptions);
 
-    // 既存のWorkerからのレスポンスをテキストとして取得し、ログに出力
+    // 既存のWorkerからのレスポンスをテキストとして取得
     const workerResponseText = await workerResponse.text();
-    console.log('Worker Response Text:', workerResponseText);
 
     let workerData;
     try {
       workerData = JSON.parse(workerResponseText);
     } catch (jsonError) {
-      console.error('Failed to parse Worker response as JSON:', jsonError);
       // JSONパースエラーが発生した場合、エラーレスポンスを返す
       return new Response(JSON.stringify({
           status: 'error',
@@ -68,7 +66,6 @@ export async function onRequest(context) {
 
   } catch (error) {
     // Pages Function自体で発生したエラー（例: fetch失敗、JSONパース失敗など）
-    console.error('Pages Function内部エラー:', error);
     return new Response(JSON.stringify({
         status: 'error',
         message: `Pages Function内部エラー: ${error.message}`
