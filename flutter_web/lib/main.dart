@@ -100,7 +100,6 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _loadThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
-    // Load the theme mode index, defaulting to light mode if not found.
     final themeIndex = prefs.getInt(themeModeKey) ?? ThemeMode.light.index;
     setState(() {
       _themeMode = ThemeMode.values[themeIndex];
@@ -133,7 +132,7 @@ class _MyAppState extends State<MyApp> {
         ),
         cardTheme: CardTheme(elevation: 4.0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0))),
       ),
-      themeMode: _themeMode, // Use state variable to control theme
+      themeMode: _themeMode,
       builder: (context, child) => ResponsiveBreakpoints.builder(
         child: child!,
         breakpoints: [
@@ -166,13 +165,13 @@ class _MyHomePageState extends State<MyHomePage> {
   String _statusMessage = '';
   String _rawResponse = '';
   Timer? _timer;
-  bool _isLoading = false; // New state for loading status
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _portfolioItems = List.from(initialPortfolioItems);
-    _callWorker(isInitialLoad: true); // Pass flag for initial load
+    _callWorker(isInitialLoad: true);
     _setupTimer();
   }
 
@@ -182,19 +181,15 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
-  // --- Theme Toggle ---
   void _toggleTheme() {
-    // Find the state of the root widget (_MyAppState)
     final myAppState = context.findAncestorStateOfType<_MyAppState>();
     if (myAppState == null) return;
 
     final currentMode = myAppState._themeMode;
-    // Toggle between light and dark mode
     final newMode = currentMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
     myAppState.changeTheme(newMode);
   }
 
-  // --- Timer Setup ---
   Future<void> _setupTimer() async {
     _timer?.cancel();
     final prefs = await SharedPreferences.getInstance();
@@ -210,7 +205,6 @@ class _MyHomePageState extends State<MyHomePage> {
     await prefs.setStringList(portfolioKey, jsonStrings);
   }
 
-  // --- Stock Management ---
   Future<void> _addStock(String code, int quantity, double acquisitionPrice) async {
     final upperCaseCode = code.toUpperCase();
     if (upperCaseCode.isNotEmpty && quantity > 0 && acquisitionPrice >= 0) {
@@ -274,18 +268,17 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  // --- API Call ---
   Future<void> _callWorker({bool isInitialLoad = false}) async {
-    if (_isLoading) return; // Prevent concurrent calls
+    if (_isLoading) return;
 
     setState(() {
       _isLoading = true;
       if (isInitialLoad) {
         _statusMessage = 'Loading...';
       } else {
-        _statusMessage = ''; // Clear previous status on subsequent refreshes
+        _statusMessage = '';
       }
-      _rawResponse = ''; // Clear previous raw response
+      _rawResponse = '';
     });
 
     try {
@@ -296,18 +289,14 @@ class _MyHomePageState extends State<MyHomePage> {
           _defaultFinancialData = [];
           _portfolioDisplayData = [];
         });
-        return;
-      }
+      } else {
+        final codes = allCodesSet.join(',');
+        final workerUrl = 'https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes=$codes';
 
-      final codes = allCodesSet.join(',');
-      final workerUrl = 'https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes=$codes';
+        final response = await http.get(Uri.parse(workerUrl));
 
-      final response = await http.get(Uri.parse(workerUrl));
-      final responseBody = utf8.decode(response.bodyBytes);
-
-      if (response.statusCode == 200) {
-        try {
-          final decoded = json.decode(responseBody);
+        if (response.statusCode == 200) {
+          final decoded = json.decode(utf8.decode(response.bodyBytes));
           final List<FinancialData> fetchedData =
               (decoded['data'] as List).map((item) => FinancialData.fromJson(item)).toList();
 
@@ -325,17 +314,12 @@ class _MyHomePageState extends State<MyHomePage> {
             const jsonEncoder = JsonEncoder.withIndent('  ');
             _rawResponse = jsonEncoder.convert(decoded);
           });
-        } on FormatException {
+        } else {
           setState(() {
-            _statusMessage = 'Error: Invalid JSON response from server.';
-            _rawResponse = responseBody;
+            _statusMessage = 'Error: ${response.statusCode}';
+            _rawResponse = response.body;
           });
         }
-      } else {
-        setState(() {
-          _statusMessage = 'Error: ${response.statusCode}';
-          _rawResponse = responseBody;
-        });
       }
     } catch (e) {
       setState(() {
@@ -343,16 +327,16 @@ class _MyHomePageState extends State<MyHomePage> {
         _rawResponse = e.toString();
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  // --- UI ---
   @override
   Widget build(BuildContext context) {
-    // Check the current brightness to set the toggle icon appropriately
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -365,7 +349,6 @@ class _MyHomePageState extends State<MyHomePage> {
             tooltip: 'Toggle Theme',
           ),
           IconButton(icon: const Icon(Icons.add), onPressed: _showAddStockDialog, tooltip: 'Add Stock to Portfolio'),
-          // Loading indicator and refresh button logic
           if (_isLoading)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 14.0, vertical: 10.0),
@@ -378,32 +361,30 @@ class _MyHomePageState extends State<MyHomePage> {
           else
             IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: _callWorker,
+              onPressed: () => _callWorker(),
               tooltip: 'Refresh Data',
             ),
           Builder(
-            builder:
-                (context) => IconButton(
-                  icon: const Icon(Icons.timer_outlined),
-                  onPressed: () {
-                    showPopover(
-                      context: context,
-                      bodyBuilder: (context) => const UpdateIntervalPicker(),
-                      onPop: () => _setupTimer(),
-                      direction: PopoverDirection.bottom,
-                      width: 250,
-                      arrowHeight: 15,
-                      arrowWidth: 30,
-                    );
-                  },
-                  tooltip: 'Set Update Interval',
-                ),
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.timer_outlined),
+              onPressed: () {
+                showPopover(
+                  context: context,
+                  bodyBuilder: (context) => const UpdateIntervalPicker(),
+                  onPop: () => _setupTimer(),
+                  direction: PopoverDirection.bottom,
+                  width: 250,
+                  arrowHeight: 15,
+                  arrowWidth: 30,
+                );
+              },
+              tooltip: 'Set Update Interval',
+            ),
           ),
         ],
       ),
       body: ListView(
         children: <Widget>[
-          // Display status message only when loading or if there's an error and no data
           if (_statusMessage.isNotEmpty && (_isLoading || (_defaultFinancialData.isEmpty && _portfolioDisplayData.isEmpty)))
             Padding(
               padding: const EdgeInsets.all(24.0),
@@ -421,7 +402,7 @@ class _MyHomePageState extends State<MyHomePage> {
           _buildSectionHeader(context, 'My Portfolio'),
           if (_portfolioDisplayData.isNotEmpty)
             _buildPortfolioGridView(_portfolioDisplayData, true, false)
-          else if (_portfolioItems.isEmpty && !_isLoading) // Don't show if loading
+          else if (_portfolioItems.isEmpty && !_isLoading)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
               child: Center(child: Text('Your portfolio is empty. Add stocks using the  +(Pulse) button.')),
@@ -516,7 +497,7 @@ class _MyHomePageState extends State<MyHomePage> {
           isDefaultSection
               ? const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
-                childAspectRatio: 1.0 / 0.35, // 0.5 * 0.7
+                childAspectRatio: 1.0 / 0.35,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
               )
