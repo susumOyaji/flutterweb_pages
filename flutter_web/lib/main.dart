@@ -142,16 +142,27 @@ class _MyAppState extends State<MyApp> {
           const Breakpoint(start: 1921, end: double.infinity, name: '4K'),
         ],
       ),
-      home: const MyHomePage(title: 'Market & Portfolio'),
+      home: MyHomePage(
+        title: 'Market & Portfolio',
+        themeMode: _themeMode,
+        onThemeChanged: changeTheme,
+      ),
     );
   }
 }
 
 // --- Home Page ---
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  const MyHomePage({
+    super.key,
+    required this.title,
+    required this.themeMode,
+    required this.onThemeChanged,
+  });
 
   final String title;
+  final ThemeMode themeMode;
+  final ValueChanged<ThemeMode> onThemeChanged;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -182,12 +193,8 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _toggleTheme() {
-    final myAppState = context.findAncestorStateOfType<_MyAppState>();
-    if (myAppState == null) return;
-
-    final currentMode = myAppState._themeMode;
-    final newMode = currentMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
-    myAppState.changeTheme(newMode);
+    final newMode = widget.themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    widget.onThemeChanged(newMode);
   }
 
   Future<void> _setupTimer() async {
@@ -269,69 +276,101 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _callWorker({bool isInitialLoad = false}) async {
-    if (_isLoading) return;
+    if (_isLoading) {
+      
+      return;
+    }
 
+    
     setState(() {
       _isLoading = true;
       if (isInitialLoad) {
         _statusMessage = 'Loading...';
-      } else {
-        _statusMessage = '';
       }
-      _rawResponse = '';
+      // On background refresh, we DON'T clear the status message or data until new data arrives.
     });
 
     try {
       final allCodesSet = <String>{..._defaultCodes, ..._portfolioItems.map((e) => e.code)};
       if (allCodesSet.isEmpty) {
-        setState(() {
-          _statusMessage = 'No stocks to display.';
-          _defaultFinancialData = [];
-          _portfolioDisplayData = [];
-        });
-      } else {
-        final codes = allCodesSet.join(',');
-        final workerUrl = 'https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes=$codes';
-
-        final response = await http.get(Uri.parse(workerUrl));
-
-        if (response.statusCode == 200) {
-          final decoded = json.decode(utf8.decode(response.bodyBytes));
-          final List<FinancialData> fetchedData =
-              (decoded['data'] as List).map((item) => FinancialData.fromJson(item)).toList();
-
-          final Map<String, FinancialData> dataMap = {for (var data in fetchedData) data.code: data};
-
+        if (mounted) {
           setState(() {
-            _defaultFinancialData = _defaultCodes.map((code) => dataMap[code]).whereType<FinancialData>().toList();
-            _portfolioDisplayData = _portfolioItems.map((item) {
-              final financialData = dataMap[item.code];
-              return financialData != null
-                  ? PortfolioDisplayData(financialData: financialData, portfolioItem: item)
-                  : null;
-            }).whereType<PortfolioDisplayData>().toList();
-            _statusMessage = '';
-            const jsonEncoder = JsonEncoder.withIndent('  ');
-            _rawResponse = jsonEncoder.convert(decoded);
-          });
-        } else {
-          setState(() {
-            _statusMessage = 'Error: ${response.statusCode}';
-            _rawResponse = response.body;
+            _statusMessage = 'No stocks to display.';
+            _defaultFinancialData = [];
+            _portfolioDisplayData = [];
+            _isLoading = false;
           });
         }
+        return; // No need to proceed further
       }
-    } catch (e) {
-      setState(() {
-        _statusMessage = 'Error: $e';
-        _rawResponse = e.toString();
-      });
-    } finally {
-      if (mounted) {
+
+      final codes = allCodesSet.join(',');
+      final workerUrl = 'https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes=$codes';
+      
+
+      // Add a timeout to the request
+      final response = await http.get(Uri.parse(workerUrl)).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        
+        final decoded = json.decode(utf8.decode(response.bodyBytes));
+        final List<FinancialData> fetchedData =
+            (decoded['data'] as List).map((item) => FinancialData.fromJson(item)).toList();
+
+        final Map<String, FinancialData> dataMap = {for (var data in fetchedData) data.code: data};
+
+        if (!mounted) return;
         setState(() {
+          // Update data and clear status message only on success
+          _defaultFinancialData = _defaultCodes.map((code) => dataMap[code]).whereType<FinancialData>().toList();
+          _portfolioDisplayData = _portfolioItems.map((item) {
+            final financialData = dataMap[item.code];
+            return financialData != null
+                ? PortfolioDisplayData(financialData: financialData, portfolioItem: item)
+                : null;
+          }).whereType<PortfolioDisplayData>().toList();
+          _statusMessage = '';
+          const jsonEncoder = JsonEncoder.withIndent('  ');
+          _rawResponse = jsonEncoder.convert(decoded);
+          _isLoading = false;
+        });
+      } else {
+        
+        if (!mounted) return;
+        setState(() {
+          // Don't clear existing data. Just show the error.
+          _statusMessage = 'Failed to load data: Server returned status ${response.statusCode}';
+          _rawResponse = response.body;
           _isLoading = false;
         });
       }
+    } on TimeoutException catch (e) {
+      
+      if (!mounted) return;
+      setState(() {
+        _statusMessage = 'Error: The request timed out. Please check your connection.';
+        _rawResponse = e.toString();
+        _isLoading = false;
+      });
+    } on http.ClientException catch (e) {
+      
+      if (!mounted) return;
+      setState(() {
+        _statusMessage = 'Error: Could not connect to the server. Please check your internet connection.';
+        _rawResponse = e.toString();
+        _isLoading = false;
+      });
+    } catch (e, stackTrace) {
+      
+      
+      if (!mounted) return;
+      setState(() {
+        _statusMessage = 'An unexpected error occurred: $e';
+        _rawResponse = e.toString();
+        _isLoading = false;
+      });
+    } finally {
+      
     }
   }
 
@@ -787,7 +826,7 @@ class StockCard extends StatelessWidget {
                           Text(
                             '${financialData.bidValue}',
                             style: TextStyle(
-                              color: const Color.fromARGB(255, 2, 2, 2),
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontWeight: FontWeight.bold,
                               fontSize: 22,
                             ),
