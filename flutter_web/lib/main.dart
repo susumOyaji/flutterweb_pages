@@ -337,13 +337,6 @@ class _MyHomePageState extends State<MyHomePage> {
             backgroundColor: Colors.orangeAccent,
             duration: const Duration(seconds: 8),
           ));
-        } else if (!isInitialLoad) {
-          // Show success SnackBar only if data is complete and not the initial load
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Data updated successfully.\nResponse: $rawResponseString'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 8),
-          ));
         }
       } else {
         final errorMessage = 'Failed to load data: Server returned status ${response.statusCode}';
