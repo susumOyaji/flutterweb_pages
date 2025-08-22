@@ -277,51 +277,44 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _callWorker({bool isInitialLoad = false}) async {
     if (_isLoading) {
-      
       return;
     }
 
-    
     setState(() {
       _isLoading = true;
       if (isInitialLoad) {
         _statusMessage = 'Loading...';
       }
-      // On background refresh, we DON'T clear the status message or data until new data arrives.
     });
 
-    try {
-      final allCodesSet = <String>{..._defaultCodes, ..._portfolioItems.map((e) => e.code)};
-      if (allCodesSet.isEmpty) {
-        if (mounted) {
-          setState(() {
-            _statusMessage = 'No stocks to display.';
-            _defaultFinancialData = [];
-            _portfolioDisplayData = [];
-            _isLoading = false;
-          });
-        }
-        return; // No need to proceed further
+    final allCodesSet = <String>{..._defaultCodes, ..._portfolioItems.map((e) => e.code)};
+    if (allCodesSet.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _statusMessage = 'No stocks to display.';
+          _defaultFinancialData = [];
+          _portfolioDisplayData = [];
+          _isLoading = false;
+        });
       }
+      return;
+    }
 
-      final codes = allCodesSet.join(',');
-      final workerUrl = 'https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes=$codes';
-      
+    final codes = allCodesSet.join(',');
+    final workerUrl = 'https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes=$codes';
 
-      // Add a timeout to the request
-      final response = await http.get(Uri.parse(workerUrl)).timeout(const Duration(seconds: 15));
+    try {
+      final response = await http
+          .get(Uri.parse(workerUrl), headers: {'Accept': 'application/json'}).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
-        
         final decoded = json.decode(utf8.decode(response.bodyBytes));
         final List<FinancialData> fetchedData =
             (decoded['data'] as List).map((item) => FinancialData.fromJson(item)).toList();
-
         final Map<String, FinancialData> dataMap = {for (var data in fetchedData) data.code: data};
 
         if (!mounted) return;
         setState(() {
-          // Update data and clear status message only on success
           _defaultFinancialData = _defaultCodes.map((code) => dataMap[code]).whereType<FinancialData>().toList();
           _portfolioDisplayData = _portfolioItems.map((item) {
             final financialData = dataMap[item.code];
@@ -332,45 +325,66 @@ class _MyHomePageState extends State<MyHomePage> {
           _statusMessage = '';
           const jsonEncoder = JsonEncoder.withIndent('  ');
           _rawResponse = jsonEncoder.convert(decoded);
-          _isLoading = false;
+          _isLoading = false; // Consolidated
         });
+
+        // Show success SnackBar, unless it's the very first load
+        if (!isInitialLoad) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Data updated successfully.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ));
+        }
       } else {
-        
+        final errorMessage = 'Failed to load data: Server returned status ${response.statusCode}';
         if (!mounted) return;
         setState(() {
-          // Don't clear existing data. Just show the error.
-          _statusMessage = 'Failed to load data: Server returned status ${response.statusCode}';
+          _statusMessage = errorMessage;
           _rawResponse = response.body;
-          _isLoading = false;
+          _isLoading = false; // Consolidated
         });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.redAccent,
+        ));
       }
     } on TimeoutException catch (e) {
-      
+      final errorMessage = 'Error: The request timed out. Please check your connection.';
       if (!mounted) return;
       setState(() {
-        _statusMessage = 'Error: The request timed out. Please check your connection.';
+        _statusMessage = errorMessage;
         _rawResponse = e.toString();
-        _isLoading = false;
+        _isLoading = false; // Consolidated
       });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(errorMessage),
+        backgroundColor: Colors.redAccent,
+      ));
     } on http.ClientException catch (e) {
-      
+      final errorMessage = 'Error: Could not connect to the server. Please check your internet connection.';
       if (!mounted) return;
       setState(() {
-        _statusMessage = 'Error: Could not connect to the server. Please check your internet connection.';
+        _statusMessage = errorMessage;
         _rawResponse = e.toString();
-        _isLoading = false;
+        _isLoading = false; // Consolidated
       });
-    } catch (e, stackTrace) {
-      
-      
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(errorMessage),
+        backgroundColor: Colors.redAccent,
+      ));
+    } catch (e) {
+      final errorMessage = 'An unexpected error occurred: $e';
       if (!mounted) return;
       setState(() {
-        _statusMessage = 'An unexpected error occurred: $e';
+        _statusMessage = errorMessage;
         _rawResponse = e.toString();
-        _isLoading = false;
+        _isLoading = false; // Consolidated
       });
-    } finally {
-      
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(errorMessage),
+        backgroundColor: Colors.redAccent,
+      ));
     }
   }
 
@@ -532,20 +546,12 @@ class _MyHomePageState extends State<MyHomePage> {
       padding: const EdgeInsets.all(16.0),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate:
-          isDefaultSection
-              ? const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 1.0 / 0.35,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              )
-              : const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 420,
-                childAspectRatio: 4 / 3,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 420, // Set a max width for each item
+        childAspectRatio: 2.8,   // Adjust for content
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
       itemCount: data.length,
       itemBuilder: (context, index) {
         final item = data[index];
@@ -772,6 +778,17 @@ class StockCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screen = ResponsiveBreakpoints.of(context);
+    final isMobile = screen.smallerThan(TABLET);
+
+    // Responsive font sizes
+    final double nameFontSize = isMobile ? 16 : 18;
+    final double codeFontSize = isMobile ? 12 : 14;
+    final double valueFontSize = isMobile ? 20 : 22;
+    final double changeFontSize = isMobile ? 14 : 16;
+    final double portfolioLabelSize = isMobile ? 12 : 14;
+    final double portfolioValueSize = isMobile ? 13 : 14;
+
     final changeColor = financialData.previousDayChange.startsWith('-') ? Colors.red : Colors.green;
     final changeRateColor = financialData.changeRate.startsWith('-') ? Colors.red : Colors.green;
 
@@ -800,13 +817,13 @@ class StockCard extends StatelessWidget {
                   children: [
                     Text(
                       financialData.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: nameFontSize),
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '${financialData.code} (${financialData.updateTime})',
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: codeFontSize),
                     ),
                   ],
                 ),
@@ -820,7 +837,7 @@ class StockCard extends StatelessWidget {
                         if (financialData.code != 'USDJPY=FX')
                           Text(
                             financialData.currentValue,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: valueFontSize),
                           ),
                         if (financialData.bidValue != null && financialData.bidValue!.isNotEmpty)
                           Text(
@@ -828,7 +845,7 @@ class StockCard extends StatelessWidget {
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.onSurface,
                               fontWeight: FontWeight.bold,
-                              fontSize: 22,
+                              fontSize: valueFontSize,
                             ),
                           ),
                       ],
@@ -837,8 +854,10 @@ class StockCard extends StatelessWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(financialData.previousDayChange, style: TextStyle(color: changeColor, fontSize: 16)),
-                          Text('(${financialData.changeRate}%)', style: TextStyle(color: changeColor)),
+                          Text(financialData.previousDayChange,
+                              style: TextStyle(color: changeColor, fontSize: changeFontSize)),
+                          Text('(${financialData.changeRate}%)',
+                              style: TextStyle(color: changeColor, fontSize: changeFontSize - 2)),
                         ],
                       )
                     else
@@ -850,11 +869,11 @@ class StockCard extends StatelessWidget {
                               children: [
                                 TextSpan(
                                   text: 'P/L: ',
-                                  style: const TextStyle(fontSize: 16, color: Colors.blue), // 文字部分は青
+                                  style: TextStyle(fontSize: changeFontSize, color: Colors.blue), // 文字部分は青
                                 ),
                                 TextSpan(
                                   text: financialData.changeRate,
-                                  style: TextStyle(fontSize: 16, color: changeRateColor), // 数値部分は正負で色分け
+                                  style: TextStyle(fontSize: changeFontSize, color: changeRateColor), // 数値部分は正負で色分け
                                 ),
                               ],
                             ),
@@ -868,13 +887,16 @@ class StockCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Divider(),
-                      Text('Quantity: ${portfolioItem!.quantity}'),
-                      Text('Acq. Price: ${portfolioItem!.acquisitionPrice.toStringAsFixed(2)}'),
-                      if (estimatedValue != null) Text('Est. Value: ${estimatedValue.toStringAsFixed(2)}'),
+                      Text('Quantity: ${portfolioItem!.quantity}', style: TextStyle(fontSize: portfolioLabelSize)),
+                      Text('Acq. Price: ${portfolioItem!.acquisitionPrice.toStringAsFixed(2)}',
+                          style: TextStyle(fontSize: portfolioLabelSize)),
+                      if (estimatedValue != null)
+                        Text('Est. Value: ${estimatedValue.toStringAsFixed(2)}',
+                            style: TextStyle(fontSize: portfolioLabelSize)),
                       if (profitLoss != null)
                         Text(
                           'P/L: ${profitLoss.toStringAsFixed(2)}',
-                          style: TextStyle(color: profitLossColor, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: profitLossColor, fontWeight: FontWeight.bold, fontSize: portfolioValueSize),
                         ),
                     ],
                   ),
