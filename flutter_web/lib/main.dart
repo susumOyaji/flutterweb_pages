@@ -312,6 +312,8 @@ class _MyHomePageState extends State<MyHomePage> {
         final List<FinancialData> fetchedData =
             (decoded['data'] as List).map((item) => FinancialData.fromJson(item)).toList();
         final Map<String, FinancialData> dataMap = {for (var data in fetchedData) data.code: data};
+        const jsonEncoder = JsonEncoder.withIndent('  ');
+        final rawResponseString = jsonEncoder.convert(decoded);
 
         if (!mounted) return;
         setState(() {
@@ -323,17 +325,24 @@ class _MyHomePageState extends State<MyHomePage> {
                 : null;
           }).whereType<PortfolioDisplayData>().toList();
           _statusMessage = '';
-          const jsonEncoder = JsonEncoder.withIndent('  ');
-          _rawResponse = jsonEncoder.convert(decoded);
+          _rawResponse = rawResponseString;
           _isLoading = false; // Consolidated
         });
 
-        // Show success SnackBar, unless it's the very first load
-        if (!isInitialLoad) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Data updated successfully.'),
+        // Check for incomplete data and show a warning SnackBar
+        final incompleteItems = fetchedData.where((d) => d.name == 'N/A' || d.code == 'N/A').toList();
+        if (incompleteItems.isNotEmpty && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Warning: Incomplete data received.\nDetails: $rawResponseString'),
+            backgroundColor: Colors.orangeAccent,
+            duration: const Duration(seconds: 8),
+          ));
+        } else if (!isInitialLoad) {
+          // Show success SnackBar only if data is complete and not the initial load
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Data updated successfully.\nResponse: $rawResponseString'),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
+            duration: const Duration(seconds: 8),
           ));
         }
       } else {
@@ -345,8 +354,9 @@ class _MyHomePageState extends State<MyHomePage> {
           _isLoading = false; // Consolidated
         });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(errorMessage),
+          content: Text('$errorMessage\nDetails: ${response.body}'),
           backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 8),
         ));
       }
     } on TimeoutException catch (e) {
@@ -358,8 +368,9 @@ class _MyHomePageState extends State<MyHomePage> {
         _isLoading = false; // Consolidated
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(errorMessage),
+        content: Text('$errorMessage\nDetails: ${e.toString()}'),
         backgroundColor: Colors.redAccent,
+        duration: const Duration(seconds: 8),
       ));
     } on http.ClientException catch (e) {
       final errorMessage = 'Error: Could not connect to the server. Please check your internet connection.';
@@ -370,8 +381,9 @@ class _MyHomePageState extends State<MyHomePage> {
         _isLoading = false; // Consolidated
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(errorMessage),
+        content: Text('$errorMessage\nDetails: ${e.toString()}'),
         backgroundColor: Colors.redAccent,
+        duration: const Duration(seconds: 8),
       ));
     } catch (e) {
       final errorMessage = 'An unexpected error occurred: $e';
@@ -382,8 +394,9 @@ class _MyHomePageState extends State<MyHomePage> {
         _isLoading = false; // Consolidated
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(errorMessage),
+        content: Text('$errorMessage\nDetails: ${e.toString()}'),
         backgroundColor: Colors.redAccent,
+        duration: const Duration(seconds: 8),
       ));
     }
   }
