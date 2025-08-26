@@ -748,6 +748,18 @@ class _UpdateIntervalPickerState extends State<UpdateIntervalPicker> {
             onChanged: _setUpdateInterval,
           ),
           RadioListTile<int>(
+            title: const Text('2 minutes'),
+            value: 120,
+            groupValue: _updateInterval,
+            onChanged: _setUpdateInterval,
+          ),
+          RadioListTile<int>(
+            title: const Text('3 minutes'),
+            value: 180,
+            groupValue: _updateInterval,
+            onChanged: _setUpdateInterval,
+          ),
+          RadioListTile<int>(
             title: const Text('5 minutes'),
             value: 300,
             groupValue: _updateInterval,
