@@ -18,14 +18,12 @@ export async function onRequest(context) {
     // 既存のWorkerのベースURL
     const baseUrl = 'https://rustwasm-fullstack-app.sumitomo0210.workers.dev/';
 
-    // Pages FunctionへのリクエストURLからクエリパラメータを取得
+    // Pages FunctionへのリクエストURLを取得
     const url = new URL(context.request.url);
-    const codes = url.searchParams.get('codes');
 
-    let workerFetchUrl = baseUrl + 'api/quote';
-    if (codes) {
-      workerFetchUrl += `?codes=${encodeURIComponent(codes)}`;
-    }
+    // URLのクエリ文字列（?以降）をそのまま利用する
+    const search = url.search;
+    let workerFetchUrl = baseUrl + 'api/quote' + search;
 
     const fetchOptions = {
       method: context.request.method,
