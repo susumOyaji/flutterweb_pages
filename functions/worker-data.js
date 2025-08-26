@@ -37,32 +37,27 @@ export async function onRequest(context) {
     fetchOptions.headers.delete('Host');
 
     const workerResponse = await fetch(workerFetchUrl, fetchOptions);
-    const workerResponseText = await workerResponse.text();
 
-    let workerData;
-    try {
-      workerData = JSON.parse(workerResponseText);
-    } catch (jsonError) {
+    // Workerからのレスポンスが成功した場合
+    if (workerResponse.ok) {
+      const workerResponseText = await workerResponse.text();
+      // CORSヘッダーを付与しつつ、Workerのレスポンスボディをそのまま返す
+      return new Response(workerResponseText, {
+        status: workerResponse.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } else {
+      // Workerからのレスポンスが失敗した場合
+      const workerResponseText = await workerResponse.text();
       return new Response(JSON.stringify({
         status: 'error',
-        message: `既存Workerからのレスポンスが不正なJSONです: ${jsonError.message}`,
+        message: `既存Workerからのエラー: ${workerResponse.statusText || '不明なエラー'}`,
         rawResponse: workerResponseText,
       }), {
-        status: 500,
+        status: workerResponse.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    return new Response(JSON.stringify({
-      status: workerResponse.ok ? 'success' : 'error',
-      data: workerData,
-      source: 'existing-worker',
-      message: workerResponse.ok ? 'データ取得成功' : `既存Workerからのエラー: ${workerResponse.statusText || '不明なエラー'}`,
-    }), {
-      status: workerResponse.status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
   } catch (error) {
     return new Response(JSON.stringify({
       status: 'error',
