@@ -65,3 +65,5 @@ flutter_web/build/
 #flutter run -d chrome --web-hostname localhost --web-port 8000
 #flutter run -d edge --web-hostname localhost --web-port 8000
 #flutter build web --release
+#flutter run -d chrome --web-port 8787
+#lutter run -d edge --web-port 8787
