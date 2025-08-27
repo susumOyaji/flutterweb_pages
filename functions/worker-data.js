@@ -30,15 +30,13 @@ export async function onRequest(context) {
       headers: new Headers(context.request.headers),
     };
 
-    fetchOptions.headers.delete('Host');
-
     if (context.request.method !== 'GET' && context.request.body) {
-      fetchOptions.body = await context.request.text();
+      fetchOptions.body = context.request.body;
     }
 
-    const workerResponse = await fetch(workerFetchUrl, fetchOptions);
+    fetchOptions.headers.delete('Host');
 
-    const contentType = workerResponse.headers.get('Content-Type') || 'application/json';
+    const workerResponse = await fetch(workerFetchUrl, fetchOptions);
 
     // Workerからのレスポンスが成功した場合
     if (workerResponse.ok) {
@@ -46,7 +44,7 @@ export async function onRequest(context) {
       // CORSヘッダーを付与しつつ、Workerのレスポンスボディをそのまま返す
       return new Response(workerResponseText, {
         status: workerResponse.status,
-        headers: { ...corsHeaders, 'Content-Type': contentType },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } else {
       // Workerからのレスポンスが失敗した場合
