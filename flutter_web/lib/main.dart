@@ -433,6 +433,7 @@ class _MyHomePageState extends State<MyHomePage> {
             builder: (context) => IconButton(
               icon: const Icon(Icons.timer_outlined),
               onPressed: () {
+                final isDarkMode = Theme.of(context).brightness == Brightness.dark;
                 showPopover(
                   context: context,
                   bodyBuilder: (context) => const UpdateIntervalPicker(),
@@ -441,6 +442,13 @@ class _MyHomePageState extends State<MyHomePage> {
                   width: 250,
                   arrowHeight: 15,
                   arrowWidth: 30,
+                  backgroundColor: isDarkMode ? Colors.black : null, // ダークモード時のみ黒
+                  shape: isDarkMode
+                      ? RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                          side: const BorderSide(color: Colors.white, width: 1.5),
+                        )
+                      : null, // ダークモード時のみ枠線を追加
                 );
               },
               tooltip: 'Set Update Interval',
