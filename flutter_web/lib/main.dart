@@ -123,16 +123,16 @@ class _MyAppState extends State<MyApp> {
           seedColor: Colors.deepPurple,
           brightness: Brightness.light,
         ),
-        cardTheme: CardTheme(elevation: 4.0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0))),
+        cardTheme: CardThemeData(elevation: 4.0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0))),
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.deepPurple,
           brightness: Brightness.dark,
         ),
-        cardTheme: CardTheme(elevation: 4.0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0))),
+        cardTheme: CardThemeData(elevation: 4.0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0))),
         radioTheme: RadioThemeData(
-          fillColor: MaterialStateProperty.all(Colors.white70),
+          fillColor: WidgetStateProperty.all(Colors.white70),
         ),
         listTileTheme: const ListTileThemeData(
           textColor: Colors.white,
@@ -259,7 +259,7 @@ class _MyHomePageState extends State<MyHomePage> {
         return AlertDialog(
           title: const Text('Confirm Deletion'),
           content: const Text(
-            'Are you sure you want to remove this stock from your portfolio?\nこの株をポートフォリオから削除してもいいですか？',
+            'Are you sure you want to remove this stock from your portfolio?',
           ),
           actions: <Widget>[
             TextButton(
@@ -441,6 +441,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   width: 250,
                   arrowHeight: 15,
                   arrowWidth: 30,
+                  backgroundColor: Theme.of(context).cardColor,
                 );
               },
               tooltip: 'Set Update Interval',
@@ -460,17 +461,17 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
           if (_defaultFinancialData.isNotEmpty) _buildSectionHeader(context, 'Default Market Data'),
-          if (_defaultFinancialData.isNotEmpty) _buildGridView(_defaultFinancialData, false, true),
+          if (_defaultFinancialData.isNotEmpty) _buildGridView(_defaultFinancialData, false),
 
           if (_portfolioDisplayData.isNotEmpty) _buildTotalProfitLoss(),
 
           _buildSectionHeader(context, 'My Portfolio'),
           if (_portfolioDisplayData.isNotEmpty)
-            _buildPortfolioGridView(_portfolioDisplayData, true, false)
+            _buildPortfolioGridView(_portfolioDisplayData, true)
           else if (_portfolioItems.isEmpty && !_isLoading)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-              child: Center(child: Text('Your portfolio is empty. Add stocks using the  +(Pulse) button.')),
+              child: Center(child: Text('Your portfolio is empty. Add stocks using the + button.')),
             ),
 
           if (_rawResponse.isNotEmpty)
@@ -553,7 +554,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _buildGridView(List<FinancialData> data, bool showRemoveButton, bool isDefaultSection) {
+  Widget _buildGridView(List<FinancialData> data, bool showRemoveButton) {
     return GridView.builder(
       padding: const EdgeInsets.all(16.0),
       shrinkWrap: true,
@@ -576,25 +577,17 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _buildPortfolioGridView(List<PortfolioDisplayData> data, bool showButtons, bool isDefaultSection) {
+  Widget _buildPortfolioGridView(List<PortfolioDisplayData> data, bool showButtons) {
     return GridView.builder(
       padding: const EdgeInsets.all(16.0),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate:
-          isDefaultSection
-              ? const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 5,
-                childAspectRatio: 1.0 / 1.0,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              )
-              : const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 250,
-                childAspectRatio: 1.0 / 1.2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 250,
+        childAspectRatio: 1.0 / 1.2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
       itemCount: data.length,
       itemBuilder: (context, index) {
         final item = data[index];
