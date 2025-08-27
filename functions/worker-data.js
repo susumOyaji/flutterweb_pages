@@ -26,15 +26,11 @@ export async function onRequest(context) {
     let workerFetchUrl = baseUrl + 'api/quote' + search;
 
     const fetchOptions = {
-      method: context.request.method,
-      headers: new Headers(context.request.headers),
+      method: 'GET', // メソッドをGETに固定
+      headers: {     // ヘッダーを最小限に固定
+        'User-Agent': 'Cloudflare-Worker-Proxy/1.0'
+      },
     };
-
-    if (context.request.method !== 'GET' && context.request.body) {
-      fetchOptions.body = context.request.body;
-    }
-
-    fetchOptions.headers.delete('Host');
 
     const workerResponse = await fetch(workerFetchUrl, fetchOptions);
 

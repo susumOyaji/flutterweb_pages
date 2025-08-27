@@ -131,6 +131,14 @@ class _MyAppState extends State<MyApp> {
           brightness: Brightness.dark,
         ),
         cardTheme: CardTheme(elevation: 4.0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0))),
+        radioTheme: RadioThemeData(
+          fillColor: MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {
+            if (states.contains(MaterialState.selected)) {
+              return Colors.white; // 選択時の「点」の色
+            }
+            return Colors.grey.shade400; // 非選択時の「輪郭」の色
+          }),
+        ),
       ),
       themeMode: _themeMode,
       builder: (context, child) => ResponsiveBreakpoints.builder(
