@@ -67,3 +67,6 @@ flutter_web/build/
 #flutter build web --release
 #flutter run -d chrome --web-port 8787
 #lutter run -d edge --web-port 8787
+
+#npm install node-fetch@2
+#node check_worker.js

@@ -309,7 +309,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     final codes = allCodesSet.join(',');
-    final workerUrl = '/worker-data?codes=$codes';
+    final workerUrl = 'https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes=$codes';
 
     try {
       final response = await http

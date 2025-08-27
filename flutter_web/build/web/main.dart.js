@@ -76966,7 +76966,7 @@ a5=n.e
 a4.S(0,new A.ab(a5,new A.afK(),A.X(a5).i("ab<1,y>")))
 if(a4.a===0){if(n.c!=null)n.ac(new A.afL(n))
 s=1
-break}m="/worker-data?codes="+a4.bG(0,",")
+break}m="https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes="+a4.bG(0,",")
 p=4
 s=7
 return A.S(A.aIj(A.h7(m),A.ap(["Accept","application/json"],a3,a3)).GH(B.CP),$async$qJ)
