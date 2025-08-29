@@ -1,0 +1,18 @@
+[2025-08-29T00:26:10.305Z] リクエストを送信中...
+[2025-08-29T00:26:10.305Z] ステータス: 200 OK
+[2025-08-29T00:26:10.305Z] レスポンスボディ (JSON):
+{
+  "status": "success",
+  "data": [
+    {
+      "name": null,
+      "code": null,
+      "update_time": null,
+      "current_value": null,
+      "bid_value": null,
+      "previous_day_change": null,
+      "change_rate": null
+    }
+  ]
+}
+--------------------------------------------------

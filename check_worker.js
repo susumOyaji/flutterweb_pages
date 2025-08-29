@@ -1,7 +1,7 @@
 const fetch = require('node-fetch');
 
 // --- 設定 ---
-const TARGET_URL = 'https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes=^DJI';
+const TARGET_URL = 'https://rustwasm-fullstack-app.sumitomo0210.workers.dev/api/quote?codes=6758.T';
 const INTERVAL_SECONDS = 60; // 60秒ごとに実行
 // ------------
 
@@ -18,8 +18,12 @@ const performCheck = async () => {
         const response = await fetch(TARGET_URL, {
             headers: {
                 // ブラウザのUser-Agentを模倣
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                //'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
             }
+
+
         });
 
         const responseBody = await response.text();
